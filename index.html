@@ -1,0 +1,479 @@
+<!--
+ * @Author: linxiang
+ * @Date: 2022-03-23 14:01:11
+ * @LastEditTime: 2022-03-28 17:29:08
+ * @LastEditors: linxiang
+ * @Description:  
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Snake</title>
+    <style type="text/css">
+        body{
+            margin: 0;
+            background-color: #424242;
+        }
+
+        li{
+            list-style: none;
+        }
+
+        .wrap{
+            position: relative;
+            width: 1500px;
+            height: 900px;
+            margin: 10px auto;
+            background: url('imgs/bg.png') 0 0/100% 100%;
+            overflow: hidden;
+        }
+
+        .round{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 20px;
+            height: 20px;
+            background-image: url('./imgs/body.png');
+            background-repeat: no-repeat;
+            background-position: 0 -70px;
+            background-size: 200px 200px;
+        }
+
+        .round.head{
+            background-position: 0 -150px;
+        }
+
+        .food{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 20px;
+            height: 20px;
+            background-image: url('./imgs/body.png');
+            background-repeat: no-repeat;
+            background-position: 0 -150px;
+            background-size: 200px 200px;
+        }
+
+        /* 开始结束游戏弹窗 */
+        .game-modal{
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(94, 94, 94, .7);
+            z-index: 10;
+        }
+
+        .game-modal .modal-content{
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 250px;
+            height: 150px;
+            margin-left: -125px;
+            margin-top: -75px;
+            background: rgba(255, 255, 255, .8);
+            text-align: center;
+            border-radius: 8px;
+        }
+
+        .game-modal .modal-content .game-btn{
+            position: relative;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 100px;
+            height: 40px;
+            border-radius: 20px;
+            outline: none;
+            border: none;
+            background-color: lightcoral;
+            color: #fff;
+            cursor: pointer;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <div class="game-modal">
+            <div class="modal-content">
+                <button class="game-btn">开始游戏</button>
+            </div>
+        </div>
+        <audio src="audio/voice.wav" id="voice"></audio>
+    </div>
+
+    <script type="text/javascript" src="../utils.js"></script>
+    <script type="text/javascript">
+        window.onload = function() {
+            init();
+        }
+
+        function init() {
+            initGame();
+        }
+
+        var initGame = function() {
+            // 获取游戏容器
+            // 获取游戏弹窗
+            var oWrap = document.getElementsByClassName('wrap')[0],
+                gameModal = document.getElementsByClassName('game-modal')[0],
+                gameBtn = gameModal.getElementsByClassName('game-btn')[0],
+                oVoice = document.getElementById('voice'),
+                t = null;
+
+
+            // 创建蛇的构造函数
+            var Snake = function() {
+                // 初始身体长度
+                this.bodyArr = [
+                    {
+                        x: 0,
+                        y: 0,
+                    },
+                    {
+                        x: 0,
+                        y: 20,
+                    },
+                    {
+                        x: 0,
+                        y: 40,
+                    },
+                    {
+                        x: 0,
+                        y: 60,
+                    },
+                    {
+                        x: 0,
+                        y: 80,
+                    },
+                    {
+                        x: 0,
+                        y: 100,
+                    }
+                ];
+                // 保存容器的宽高
+                this.oWrapW = getStyles(oWrap, 'width');
+                this.oWrapH = getStyles(oWrap, 'height');
+
+                // 键盘指向 默认指向下
+                this.dir = 'DOWN';
+
+                // 默认开始游戏
+                this.isStartGame = false;
+            }
+
+            Snake.prototype = {
+
+                init: function() {
+                    
+                    this.bindEvent();
+                },
+
+                bindEvent: function() {
+                    // 绑定键盘事件
+                    // 要改变this指向 因为键盘事件操作的是Snake  不是document
+                    var _self = this;
+                    addEvent(document, 'keydown', function() {
+                        _self.onKeyDown();
+                    });
+                    // 开始游戏/继续游戏
+                    addEvent(gameBtn, 'click', function() {
+                        _self.gameBtnClick();
+                    })
+                },
+
+                gameBtnClick: function() {
+                    if (!this.isStartGame) {
+                        // 开始游戏
+                        gameBtn.innerText = '重新开始';
+                        this.isStartGame = true;
+                    } else {
+                        // 重新开始
+                        gameBtn.innerText = '开始游戏';
+                        this.isStartGame = false;
+                    }
+                    gameModal.style.display = 'none';
+                    this.bodyArr = [
+                        {
+                            x: 0,
+                            y: 0,
+                        },
+                        {
+                            x: 0,
+                            y: 20,
+                        },
+                        {
+                            x: 0,
+                            y: 40,
+                        },
+                        {
+                            x: 0,
+                            y: 60,
+                        },
+                        {
+                            x: 0,
+                            y: 80,
+                        },
+                        {
+                            x: 0,
+                            y: 100,
+                        }
+                    ];
+                    this.dir = 'DOWN';
+                    this.createFood();
+                    this.createSnake();
+                    this.run();
+                },
+
+                // 创建蛇
+                createSnake: function() {
+                    // 先创建一个6个身体的蛇身
+                    var arr = this.bodyArr,
+                        len = arr.length,
+                        item,
+                        oFrag = document.createDocumentFragment();
+                    
+                    for (var i = 0; i < len; i++) {
+                        item = arr[i];
+                        var li = document.createElement('li');
+                        if (i == len - 1) {
+                            li.className = 'round head';
+                        } else {
+                            li.className = 'round';
+                        }
+                        li.style.left = item.x + 'px';
+                        li.style.top = item.y + 'px';
+                        oFrag.appendChild(li);
+                    }
+
+                    oWrap.appendChild(oFrag);
+                },
+
+                // 移动蛇
+                move: function() {
+                    var arr = this.bodyArr,
+                        len = arr.length,
+                        item;
+                    
+                    for (var i = 0; i < len; i++) {
+                        item = arr[i];
+                        if (i === len - 1) {
+                            // 这里就要来设置头部到底是抄那个方向移动
+                            this.setHeadXY(arr);
+                        } else {
+                            // 其余的向前换位
+                            item.x = arr[i + 1].x;
+                            item.y = arr[i + 1].y;
+                        }
+                    }
+                    // 还得先清除掉原来的蛇
+                    this.removeSnake();
+                    this.createSnake();
+                    // 吃食物
+                    this.eatFood(arr);
+                    // 判断是否gameOver
+                    this.gameOver(arr);
+                },
+
+                // 抽离函数来设置头部的x y
+                // 还要判断边界
+                setHeadXY: function(arr) {
+                    var head = arr[arr.length - 1];
+                    switch (this.dir) {
+                        case 'UP':
+                            if (head.y <= 0) {
+                                head.y = this.oWrapH - 20;
+                            } else {
+                                head.y -= 20;
+                            }
+                            break;
+                        case 'DOWN':
+                            if (head.y >= this.oWrapH - 20) {
+                                head.y = 0;
+                            } else {
+                                head.y += 20;
+                            }
+                            break;
+                        case 'LEFT':
+                            if (head.x < 0) {
+                                head.x = this.oWrapW - 20;
+                            } else {
+                                head.x -= 20;
+                            }
+                            break;
+                        case 'RIGHT':
+                            if (head.x >= this.oWrapW - 20) {
+                                head.x = 0;
+                            } else {
+                                head.x += 20;
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                },
+
+                // 启动自动移动定时器
+                run: function() {
+                    var _self = this;
+                    if (t) {
+                        clearInterval(t);
+                    } 
+                    console.log('bodyArr', this.bodyArr);
+                    t = setInterval(function() {
+                        _self.move();
+                    }, 300)
+                },
+
+                removeSnake: function() {
+                    var bodys = document.getElementsByClassName('round');
+                    // 只要还有蛇身 就移除
+                    while(bodys.length > 0) {
+                        bodys[0].remove();
+                    }
+                },
+
+                onKeyDown: function(e) {
+                    var e = e || window.event,
+                        code = e.keyCode;
+                    this.setDir(code);
+                },
+
+                // 抽离一个函数来指定方向是上下左右那个
+                // 不能朝同方向多次触发 也不能朝相反放下触发
+                setDir: function(code) {
+                    switch (code) {
+                        case 38:
+                            // 上
+                            if (this.dir !== 'UP' && this.dir !== 'DOWN') {
+                                this.dir = 'UP';
+                            }
+                            break;
+                        case 40:
+                            // 下
+                            if (this.dir !== 'UP' && this.dir !== 'DOWN') {
+                                this.dir = 'DOWN';
+                            }
+                            break;
+                        case 37:
+                            // 左
+                            if (this.dir !== 'LEFT' && this.dir !== 'RIGHT') {
+                                this.dir = 'LEFT';
+                            }
+                            break;
+                        case 39:
+                            // 右
+                            if (this.dir !== 'LEFT' && this.dir !== 'RIGHT') {
+                                this.dir = 'RIGHT';
+                            }
+                            break;
+                        default:
+                            break;
+                    }
+                },
+
+                // 创建食物
+                createFood: function() {
+                    var li = document.createElement('li')
+                        x = this.setRandomXY(this.oWrapW) * 20,
+                        y = this.setRandomXY(this.oWrapH) * 20;
+                    li.className = 'food';
+                    li.style.left = x + 'px';
+                    li.style.top = y + 'px';
+                    oWrap.appendChild(li);
+                },
+
+                // 设置随机坐标
+                setRandomXY: function(size) {
+                    return Math.floor(Math.random() * size / 20);
+                },
+
+                // 移除食物
+                removeFood: function() {
+                    var food = document.getElementsByClassName('food')[0];
+
+                    food.remove();
+                },
+
+                // 吃食物
+                eatFood: function(arr) {
+                    // 获取食物
+                    // 获取蛇头
+                    // 设置存放食物的坐标
+                    var food = document.getElementsByClassName('food')[0],
+                        foodX = getStyles(food, 'left'),
+                        foodY = getStyles(food, 'top'),
+                        headX = arr[arr.length - 1].x,
+                        headY = arr[arr.length - 1].y,
+                        x,
+                        y;
+                    
+                    // 如果食物的坐标 跟蛇头的坐标相吻合 那么吃到了
+                    if (foodX === headX && foodY === headY) {
+                        oVoice.play();
+                        // 清除食物 重新创建食物
+                        this.removeFood();
+                        this.createFood();
+
+                        // 判断蛇的最后两个蛇身位置 来判断 方向
+                        // 如果x坐标相等 那么就是朝上或者朝下走
+                        // 如果最后一个蛇身的y轴坐标大于倒数第二个蛇身的y轴坐标
+                        // 就是朝上走 那么y坐标+20
+                        // 相反 朝下走 y坐标-20
+                        // 同理y坐标相等 不是朝左就是朝右
+                        if (arr[0].x === arr[1].x) {
+                            x = arr[0].x;
+                            if (arr[0].y > arr[1].y) {
+                                y = arr[0].y + 20;
+                            } else {
+                                y = arr[0].y - 20;
+                            }
+                        } else if (arr[0].y === arr[1].y) {
+                            y = arr[0].y;
+                            if (arr[0].x > arr[1].x) {
+                                x = arr[0].x + 20;
+                            } else {
+                                y = arr[0].x - 20;
+                            }
+                        }
+
+                        this.bodyArr.unshift({x: x, y:y});
+                    }
+                },
+
+                // 撞到蛇身了 游戏结束
+                gameOver: function(arr) {
+                    var headX = arr[arr.length - 1].x,
+                        headY = arr[arr.length - 1].y,
+                        item,
+                        len = arr.length - 2;
+                    // 排除头循环
+                    for (var i = 0; i < len; i++) {
+                        item = arr[i]
+                        if (headX === item.x && headY === item.y) {
+                            var _self = this;
+                            setTimeout(function() {
+                                clearInterval(t);
+                                _self.removeSnake();
+                                _self.removeFood();
+                                gameModal.style.display = 'block';
+                            }, 300);
+                        }
+                    }
+                }
+            }
+
+
+            return new Snake().init();
+
+        }
+    </script>
+</body>
+</html>
